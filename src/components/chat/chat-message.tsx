@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { User, Bot, Clock } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { ChatMessage as ChatMessageType } from '../../types/chat';
 
 interface ChatMessageProps {
@@ -49,7 +50,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
               : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-md shadow-sm'
           }`}
         >
-          <div className="whitespace-pre-wrap break-words">
+          <div className="break-words">
             {message.streaming && message.role === 'assistant' && (
               <motion.div
                 animate={{ opacity: [0.5, 1, 0.5] }}
@@ -60,7 +61,47 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
                 <span>Thinking...</span>
               </motion.div>
             )}
-            {message.content}
+            {message.role === 'assistant' ? (
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <ReactMarkdown 
+                  components={{
+                  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                  code: ({ children, className }) => 
+                    className ? (
+                      <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono">
+                        {children}
+                      </code>
+                    ) : (
+                      <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono">
+                        {children}
+                      </code>
+                    ),
+                  pre: ({ children }) => (
+                    <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg overflow-x-auto text-sm">
+                      {children}
+                    </pre>
+                  ),
+                  ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal pl-4 mb-2">{children}</ol>,
+                  li: ({ children }) => <li className="mb-1">{children}</li>,
+                  h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
+                  strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                  em: ({ children }) => <em className="italic">{children}</em>,
+                  blockquote: ({ children }) => (
+                    <blockquote className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic my-2">
+                      {children}
+                    </blockquote>
+                  ),
+                }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <div className="whitespace-pre-wrap">{message.content}</div>
+            )}
           </div>
           
           {message.tools && message.tools.length > 0 && (

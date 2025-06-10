@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Settings, 
   Plus, 
   Wifi, 
   WifiOff, 
@@ -24,6 +23,10 @@ export const MCPTools: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newConnectionName, setNewConnectionName] = useState('');
   const [newConnectionEndpoint, setNewConnectionEndpoint] = useState('');
+  const [newConnectionType, setNewConnectionType] = useState<'remote' | 'local'>('remote');
+  const [newConnectionCommand, setNewConnectionCommand] = useState('');
+  const [newConnectionArgs, setNewConnectionArgs] = useState('');
+  const [newConnectionPort, setNewConnectionPort] = useState('3000');
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   
   const {
@@ -34,24 +37,44 @@ export const MCPTools: React.FC = () => {
     testConnection,
     connectToMCP,
     disconnectFromMCP,
+    startLocalServer,
+    stopLocalServer,
   } = useMCPStore();
   
   const { t } = useLocalization();
 
   const handleAddConnection = async () => {
-    if (!newConnectionName.trim() || !newConnectionEndpoint.trim()) {
+    const name = newConnectionName.trim();
+    const endpoint = newConnectionEndpoint.trim();
+    const command = newConnectionCommand.trim();
+
+    if (!name || (newConnectionType === 'remote' && !endpoint) || (newConnectionType === 'local' && !command)) {
       toast.error(t('validation.required'));
       return;
     }
 
     try {
-      addConnection({
-        name: newConnectionName.trim(),
-        endpoint: newConnectionEndpoint.trim(),
-      });
+      const connectionData: Omit<MCPConnection, 'id' | 'status' | 'tools'> = {
+        name,
+        endpoint: newConnectionType === 'remote' ? endpoint : `http://localhost:${newConnectionPort}`,
+        type: newConnectionType,
+      };
+
+      if (newConnectionType === 'local') {
+        connectionData.command = command;
+        connectionData.args = newConnectionArgs.trim() ? newConnectionArgs.trim().split(' ') : [];
+        connectionData.port = parseInt(newConnectionPort);
+      }
+
+      addConnection(connectionData);
       
+      // Reset form
       setNewConnectionName('');
       setNewConnectionEndpoint('');
+      setNewConnectionCommand('');
+      setNewConnectionArgs('');
+      setNewConnectionPort('3000');
+      setNewConnectionType('remote');
       setIsAddModalOpen(false);
       toast.success('Connection added successfully');
     } catch (error) {
@@ -89,12 +112,33 @@ export const MCPTools: React.FC = () => {
     toast.success('Disconnected');
   };
 
+  const handleStartLocalServer = async (connectionId: string) => {
+    try {
+      await startLocalServer(connectionId);
+      toast.success('Local server started successfully');
+    } catch (error) {
+      toast.error('Failed to start local server');
+    }
+  };
+
+  const handleStopLocalServer = async (connectionId: string) => {
+    try {
+      await stopLocalServer(connectionId);
+      toast.success('Local server stopped');
+    } catch (error) {
+      toast.error('Failed to stop local server');
+    }
+  };
+
   const getStatusIcon = (status: MCPConnection['status']) => {
     switch (status) {
       case 'connected':
         return <Wifi className="text-green-500" size={16} />;
       case 'connecting':
+      case 'starting':
         return <Loader className="text-yellow-500 animate-spin" size={16} />;
+      case 'stopping':
+        return <Loader className="text-orange-500 animate-spin" size={16} />;
       case 'error':
         return <WifiOff className="text-red-500" size={16} />;
       default:
@@ -108,6 +152,10 @@ export const MCPTools: React.FC = () => {
         return t('tools.connected');
       case 'connecting':
         return t('tools.connecting');
+      case 'starting':
+        return 'Starting server...';
+      case 'stopping':
+        return 'Stopping server...';
       case 'error':
         return t('tools.error');
       default:
@@ -157,23 +205,50 @@ export const MCPTools: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-1">
-                  {connection.status === 'disconnected' && (
-                    <Button
-                      onClick={() => handleConnect(connection.id)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      Connect
-                    </Button>
-                  )}
-                  {connection.status === 'connected' && (
-                    <Button
-                      onClick={() => handleDisconnect(connection.id)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      Disconnect
-                    </Button>
+                  {connection.type === 'local' ? (
+                    // Local server controls
+                    <>
+                      {connection.status === 'disconnected' && (
+                        <Button
+                          onClick={() => handleStartLocalServer(connection.id)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Start
+                        </Button>
+                      )}
+                      {connection.status === 'connected' && (
+                        <Button
+                          onClick={() => handleStopLocalServer(connection.id)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Stop
+                        </Button>
+                      )}
+                    </>
+                  ) : (
+                    // Remote server controls
+                    <>
+                      {connection.status === 'disconnected' && (
+                        <Button
+                          onClick={() => handleConnect(connection.id)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Connect
+                        </Button>
+                      )}
+                      {connection.status === 'connected' && (
+                        <Button
+                          onClick={() => handleDisconnect(connection.id)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          Disconnect
+                        </Button>
+                      )}
+                    </>
                   )}
                   <Button
                     onClick={() => removeConnection(connection.id)}
@@ -261,26 +336,84 @@ export const MCPTools: React.FC = () => {
             onChange={(e) => setNewConnectionName(e.target.value)}
             placeholder="My MCP Server"
           />
-          
+
           <div>
-            <Input
-              label={t('tools.endpoint')}
-              value={newConnectionEndpoint}
-              onChange={(e) => setNewConnectionEndpoint(e.target.value)}
-              placeholder="ws://localhost:8080/mcp"
-            />
-            <Button
-              onClick={handleTestConnection}
-              variant="outline"
-              size="sm"
-              icon={TestTube}
-              loading={isTestingConnection}
-              disabled={!newConnectionEndpoint.trim()}
-              className="mt-2"
-            >
-              {t('tools.testConnection')}
-            </Button>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Server Type
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="remote"
+                  checked={newConnectionType === 'remote'}
+                  onChange={(e) => setNewConnectionType(e.target.value as 'remote' | 'local')}
+                  className="mr-2"
+                />
+                Remote Server
+              </label>
+              <label className="flex items-center">
+                <input
+                  type="radio"
+                  value="local"
+                  checked={newConnectionType === 'local'}
+                  onChange={(e) => setNewConnectionType(e.target.value as 'remote' | 'local')}
+                  className="mr-2"
+                />
+                Local Server
+              </label>
+            </div>
           </div>
+
+          {newConnectionType === 'remote' ? (
+            <div>
+              <Input
+                label={t('tools.endpoint')}
+                value={newConnectionEndpoint}
+                onChange={(e) => setNewConnectionEndpoint(e.target.value)}
+                placeholder="ws://localhost:8080/mcp"
+              />
+              <Button
+                onClick={handleTestConnection}
+                variant="outline"
+                size="sm"
+                icon={TestTube}
+                loading={isTestingConnection}
+                disabled={!newConnectionEndpoint.trim()}
+                className="mt-2"
+              >
+                {t('tools.testConnection')}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Input
+                label="NPX Command"
+                value={newConnectionCommand}
+                onChange={(e) => setNewConnectionCommand(e.target.value)}
+                placeholder="@modelcontextprotocol/server-filesystem"
+              />
+              <Input
+                label="Additional Arguments (optional)"
+                value={newConnectionArgs}
+                onChange={(e) => setNewConnectionArgs(e.target.value)}
+                placeholder="--verbose --path /home/user"
+              />
+              <Input
+                label="Port"
+                type="number"
+                value={newConnectionPort}
+                onChange={(e) => setNewConnectionPort(e.target.value)}
+                placeholder="3000"
+              />
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <p><strong>Example commands:</strong></p>
+                <p>• <code>@modelcontextprotocol/server-filesystem</code></p>
+                <p>• <code>@modelcontextprotocol/server-brave-search</code></p>
+                <p>• <code>mcp-server-git</code></p>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2 pt-4">
             <Button
@@ -292,7 +425,11 @@ export const MCPTools: React.FC = () => {
             <Button
               onClick={handleAddConnection}
               variant="primary"
-              disabled={!newConnectionName.trim() || !newConnectionEndpoint.trim()}
+              disabled={
+                !newConnectionName.trim() || 
+                (newConnectionType === 'remote' && !newConnectionEndpoint.trim()) ||
+                (newConnectionType === 'local' && !newConnectionCommand.trim())
+              }
             >
               {t('common.save')}
             </Button>

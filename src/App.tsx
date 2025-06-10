@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Toaster } from 'react-hot-toast';
-import { Header } from './components/layout/header';
-import { ConversationList } from './components/chat/conversation-list';
-import { ChatInterface } from './components/chat/chat-interface';
-import { MCPTools } from './components/tools/mcp-tools';
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Toaster } from "react-hot-toast";
+import { Header } from "./components/layout/header";
+import { ConversationList } from "./components/chat/conversation-list";
+import { ChatInterface } from "./components/chat/chat-interface";
+import { MCPTools } from "./components/tools/mcp-tools";
 
 function App() {
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('darkMode') === 'true' || 
-             (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (typeof window !== "undefined") {
+      return (
+        localStorage.getItem("darkMode") === "true" ||
+        (!localStorage.getItem("darkMode") &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+      );
     }
     return false;
   });
@@ -18,8 +21,8 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDarkMode);
-    localStorage.setItem('darkMode', isDarkMode.toString());
+    document.documentElement.classList.toggle("dark", isDarkMode);
+    localStorage.setItem("darkMode", isDarkMode.toString());
   }, [isDarkMode]);
 
   const toggleDarkMode = () => {
@@ -30,10 +33,7 @@ function App() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       <div className="flex flex-col h-screen">
         {/* Header */}
-        <Header 
-          isDarkMode={isDarkMode} 
-          onToggleDarkMode={toggleDarkMode} 
-        />
+        <Header isDarkMode={isDarkMode} onToggleDarkMode={toggleDarkMode} />
 
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
@@ -77,7 +77,10 @@ function App() {
               exit={{ opacity: 0 }}
               className="fixed inset-0 z-50 lg:hidden"
             >
-              <div className="absolute inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)} />
+              <div
+                className="absolute inset-0 bg-black/50"
+                onClick={() => setIsMobileMenuOpen(false)}
+              />
               <motion.div
                 initial={{ x: -300 }}
                 animate={{ x: 0 }}
@@ -97,20 +100,20 @@ function App() {
         toastOptions={{
           duration: 4000,
           style: {
-            background: isDarkMode ? '#374151' : '#ffffff',
-            color: isDarkMode ? '#f9fafb' : '#1f2937',
-            border: isDarkMode ? '1px solid #4b5563' : '1px solid #e5e7eb',
+            background: isDarkMode ? "#374151" : "#ffffff",
+            color: isDarkMode ? "#f9fafb" : "#1f2937",
+            border: isDarkMode ? "1px solid #4b5563" : "1px solid #e5e7eb",
           },
           success: {
             iconTheme: {
-              primary: '#10b981',
-              secondary: '#ffffff',
+              primary: "#10b981",
+              secondary: "#ffffff",
             },
           },
           error: {
             iconTheme: {
-              primary: '#ef4444',
-              secondary: '#ffffff',
+              primary: "#ef4444",
+              secondary: "#ffffff",
             },
           },
         }}

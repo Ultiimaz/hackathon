@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { 
-  Settings, 
+ 
   Key, 
   Thermometer, 
-  Hash, 
-  Palette, 
-  Globe, 
-  Bell,
+ 
+ 
+ 
   Save,
   Download,
   Upload,

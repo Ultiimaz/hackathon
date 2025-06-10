@@ -15,8 +15,16 @@ export interface MCPConnection {
   id: string;
   name: string;
   endpoint: string;
-  status: 'connected' | 'disconnected' | 'connecting' | 'error';
+  type: 'remote' | 'local';
+  command?: string; // npx command for local servers
+  args?: string[]; // additional arguments
+  port?: number; // port for local server
+  status: 'connected' | 'disconnected' | 'connecting' | 'error' | 'starting' | 'stopping';
   tools: MCPTool[];
+  serverProcess?: {
+    pid: number;
+    started: Date;
+  };
 }
 
 export interface MCPMessage {

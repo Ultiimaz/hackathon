@@ -63,7 +63,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4"
+      className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 pb-6"
     >
       <form onSubmit={handleSubmit} className="relative">
         <div className="flex items-end gap-3">
